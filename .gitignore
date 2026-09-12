@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.db
+
+# Large trained model artifact — regenerate with `python train_model.py`.
+# ~212 MB, exceeds GitHub's 100 MB per-file limit, and is reproducible from data/.
+model/*.joblib

@@ -1,0 +1,42 @@
+{
+  "dataset": "Metro Interstate Traffic Volume (Hogue, 2019, UCI ML Repository, doi:10.24432/C5X60B)",
+  "rows_raw": 48204,
+  "rows_after_cleaning": 40565,
+  "date_range": [
+    "2012-10-02 09:00:00",
+    "2018-09-30 23:00:00"
+  ],
+  "train_rows": 34480,
+  "test_rows": 6085,
+  "test_mae_vehicles_per_hour": 240.9,
+  "test_r2": 0.9528,
+  "model": "VotingRegressor(RandomForest + ExtraTrees + HistGradientBoosting)",
+  "model_version": "traffic-ensemble-v3-with-adt-auxiliary",
+  "features": [
+    "hour",
+    "day_of_week",
+    "month",
+    "is_weekend",
+    "is_holiday",
+    "is_rush_hour",
+    "hour_sin",
+    "hour_cos",
+    "dow_sin",
+    "dow_cos",
+    "month_sin",
+    "month_cos",
+    "temp_c",
+    "rain_1h",
+    "snow_1h",
+    "clouds_all",
+    "weather_main"
+  ],
+  "supplemental_dataset": {
+    "dataset": "Traffic Volumes - Provincial Highway System, Government of Canada",
+    "source": "https://open.canada.ca/data/en/dataset/b5b01346-6a3f-a523-9f52-c61a52791356",
+    "rows": 98,
+    "target": "annual average daily traffic (ADT)",
+    "test_mae_vehicles_per_day": 513.2,
+    "test_r2": -0.1119
+  }
+}

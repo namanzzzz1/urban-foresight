@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CityTwin — Live Urban Digital Twin</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<section class="auth-screen open" id="auth-screen">
+  <div class="auth-panel">
+    <div class="auth-mark">▥</div>
+    <p class="auth-eyebrow">CITYTWIN OPERATIONS</p>
+    <h1>Sign in to your city twin</h1>
+    <p class="auth-copy">Access live weather, traffic intelligence, simulations, alerts, and city operations data.</p>
+    <form id="login-form">
+      <label>Username<input id="login-username" autocomplete="username" placeholder="operator" required></label>
+      <label>Password<input id="login-password" type="password" autocomplete="current-password" placeholder="Enter password" required></label>
+      <button class="auth-submit" type="submit">Enter operations center</button>
+      <small class="auth-error" id="login-error"></small>
+    </form>
+    <small class="auth-note">Credentials are stored securely in the local SQLite database.</small>
+  </div>
+</section>
+<div id="vanta-bg" aria-hidden="true"></div>
+<aside>
+  <div class="brand"><span class="logo">▥</span><div><b>CityTwin</b><small>Smarter Cities. Safer Tomorrow.</small></div></div>
+  <nav>
+    <button class="active" data-view="overview">⌂ Overview</button>
+    <button data-view="traffic">▱ Traffic</button>
+    <button data-view="weather">☁ Weather</button>
+    <button data-view="air">≋ Air Quality</button>
+    <button data-view="flood">≈ Flood Risk</button>
+    <button data-view="incidents">⚠ Incidents</button>
+    <button data-view="transport">▣ Public Transport</button>
+    <button data-view="energy">ϟ Energy &amp; Utilities</button>
+    <button data-view="simulation">☷ Simulation</button>
+    <button data-view="assistant">✦ AI Assistant</button>
+    <button data-view="reports">▤ Reports</button>
+  </nav>
+  <section class="layers">
+    <header>Layers <span id="layers-close">×</span></header>
+    <label><input data-layer="buildings" type="checkbox" checked> Buildings</label>
+    <label><input data-layer="roads" type="checkbox" checked> Roads</label>
+    <label><input data-layer="traffic" type="checkbox" checked> Traffic Flow</label>
+    <label><input data-layer="incidents" type="checkbox" checked> Incidents</label>
+    <label><input id="flood-layer-toggle" data-layer="flood" type="checkbox" checked> Flood Risk</label>
+    <label><input data-layer="air" type="checkbox" checked> Air Quality</label>
+    <label><input data-layer="transport" type="checkbox" checked> Public Transport</label>
+    <label><input data-layer="utilities" type="checkbox" checked> Utilities</label>
+  </section>
+  <div class="city">City Data <b id="city-name">New Delhi</b><button id="city-change">Change</button></div>
+</aside>
+<div class="shell">
+  <header class="top">
+    <button class="search" id="search">⌕ &nbsp; Search location, asset, incident... <kbd>Ctrl K</kbd></button>
+    <div class="status">
+      <span id="clock">—</span>
+      <span class="status-dot"><i></i> Live</span>
+      <button class="icon-btn" id="bell-btn" title="Alerts">🔔</button>
+      <button class="icon-btn" id="settings-btn" title="Settings">⚙</button>
+      <button class="profile-button" id="profile"><span class="avatar">NM</span> Naman⌄</button>
+      <div class="profile-menu" id="profile-menu">
+        <b>Naman</b><small>Operator account</small>
+        <button data-account="profile">My profile</button>
+        <button data-account="new">Create new account</button>
+        <button data-account="signout" class="danger">Sign out</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section class="map-card">
+      <div id="map"></div>
+      <div class="map-fallback" id="map-fallback"><b id="map-title">City overview</b><span id="map-detail">Loading live map…</span></div>
+      <div class="weather">
+        <span id="weather-icon">🌤️</span>
+        <b><span id="weather-temp">—°C</span><small id="weather-condition">Loading current conditions</small></b>
+        <span>Humidity <strong id="humidity">—</strong></span>
+        <span>Wind <strong id="wind">—</strong></span>
+        <span>Rain <strong id="rain-now">—</strong></span>
+      </div>
+      <div class="map-controls">
+        <div class="compass">N</div>
+        <div class="zoom-group">
+          <button id="zoom-in">+</button>
+          <button id="zoom-out">−</button>
+        </div>
+      </div>
+      <div class="map-note"><span id="mode-note">Overview</span> • <span id="updated">Loading live data…</span></div>
+    </section>
+    <section class="metrics">
+      <article>
+        <small>Traffic Status</small><b class="amber" id="traffic">Moderate</b>
+        <span id="traffic-detail">Avg. speed —</span>
+        <canvas class="spark" id="spark-traffic" width="140" height="34"></canvas>
+      </article>
+      <article>
+        <small>Air Quality (AQI)</small><b id="aqi">—</b>
+        <span class="amber" id="aqi-label">Loading live AQI</span>
+        <canvas class="spark" id="spark-aqi" width="140" height="34"></canvas>
+      </article>
+      <article>
+        <small>Flood Risk</small><b class="cyan" id="flood-risk-card">—</b>
+        <span id="flood-detail">Loading rainfall</span>
+        <canvas class="spark" id="spark-flood" width="140" height="34"></canvas>
+      </article>
+      <article>
+        <small>Power Demand</small><b id="power">—</b>
+        <span id="power-detail">of capacity</span>
+        <canvas class="spark" id="spark-power" width="140" height="34"></canvas>
+      </article>
+      <article>
+        <small>Public Transport</small><b class="green" id="transport">On Time</b>
+        <span id="transport-detail">services running</span>
+        <canvas class="spark" id="spark-transport" width="140" height="34"></canvas>
+      </article>
+    </section>
+    <section class="lower">
+      <article class="card forecast">
+        <h3 id="forecast-title">Traffic Congestion Forecast <select id="forecast-location"><option>ITO</option><option>Connaught Place</option><option>Pragati Maidan</option><option>India Gate</option><option>AIIMS / Ring Road</option></select></h3>
+        <canvas id="chart" width="405" height="162"></canvas>
+        <p id="forecast-caption">Loading model forecast…</p>
+      </article>
+      <article class="card heat">
+        <h3>Risk Heatmap <small id="heat-caption">Flood exposure</small></h3>
+        <div class="tabs">
+          <button class="selected" data-risk="flood">Flood</button>
+          <button data-risk="traffic">Traffic</button>
+          <button data-risk="air">Air Quality</button>
+          <button data-risk="incident">Incident</button>
+        </div>
+        <div class="heat-body">
+          <div class="heatmap" id="heatmap"><i></i><i></i><i></i></div>
+          <ul class="legend">
+            <li><i style="background:#e74343"></i> Very High</li>
+            <li><i style="background:#ff8b31"></i> High</li>
+            <li><i style="background:#ffe22f"></i> Moderate</li>
+            <li><i style="background:#3aa0e0"></i> Low</li>
+            <li><i style="background:#19c8ef"></i> Very Low</li>
+          </ul>
+        </div>
+      </article>
+      <article class="card sim">
+        <h3>What If? Simulation <button id="simulate">Run Simulation</button></h3>
+        <label>☔ Rainfall <input id="rain" type="range" min="0" max="200" value="80"><output id="rain-out">80 mm</output></label>
+        <label>🚧 Block Road <select id="road"><option>Ring Road - 2 km</option><option>Outer Ring Road - 1 km</option></select></label>
+        <label>🚗 Traffic Increase <input id="traffic-increase" type="range" min="0" max="100" value="40"><output id="traffic-out">+40%</output></label>
+        <div class="results">
+          <span>Flood Risk <b id="flood-risk">—</b></span>
+          <span>Traffic Risk <b id="traffic-risk">—</b></span>
+          <span>Emergency ETA <b id="eta">—</b></span>
+          <span>Affected People <b id="affected">—</b></span>
+        </div>
+        <small class="sim-method" id="simulation-method">Uses selected-city weather + traffic ensemble</small>
+      </article>
+    </section>
+  </main>
+  <aside class="right">
+    <section class="card health">
+      <h3>City Health Index</h3>
+      <div class="gauge"><b id="health-score">—</b><small id="health-label">Live loading</small></div>
+      <ul>
+        <li>● Environment <b id="environment-score">—</b></li>
+        <li>● Mobility <b id="mobility-score">—</b></li>
+        <li>● Safety <b id="safety-score">—</b></li>
+        <li>● Infrastructure <b id="infrastructure-score">—</b></li>
+        <li>● Overall <b id="overall-score">—</b></li>
+      </ul>
+    </section>
+    <section class="card"><h3>Active Alerts <button class="view-all" data-list="alerts">View All</button></h3><div id="alerts"></div></section>
+    <section class="card"><h3>AI Insights <button class="view-all" data-list="insights">View All</button></h3><div id="insights"></div></section>
+  </aside>
+</div>
+<div class="modal-backdrop" id="city-modal">
+  <form class="city-dialog" id="city-form">
+    <button type="button" class="close" id="city-close">×</button>
+    <h2>Change city</h2>
+    <p>Search any city to load live weather, AQI, and re-center the map. (Map markers and demo assets stay tied to New Delhi.)</p>
+    <label>City name<input id="city-input" placeholder="e.g., Bengaluru, India" autocomplete="off" required></label>
+    <div class="city-presets">
+      <button type="button" data-city="New Delhi">New Delhi</button>
+      <button type="button" data-city="Mumbai">Mumbai</button>
+      <button type="button" data-city="Bengaluru">Bengaluru</button>
+      <button type="button" data-city="London">London</button>
+    </div>
+    <button class="primary" type="submit">Load live data</button>
+    <small id="city-error"></small>
+  </form>
+</div>
+<div class="modal-backdrop" id="assistant-modal">
+  <section class="assistant-dialog" role="dialog" aria-labelledby="assistant-title">
+    <button type="button" class="close" id="assistant-close">×</button>
+    <h2 id="assistant-title">CityTwin AI Assistant</h2>
+    <p>Ask about traffic, flood risk, air quality, power, or transit for the selected city. Answers are grounded in the current dashboard data.</p>
+    <form id="assistant-form">
+      <label>Question<input id="assistant-question" placeholder="Why is traffic bad near ITO?" autocomplete="off" required></label>
+      <button class="primary" type="submit">Analyze live city data</button>
+    </form>
+    <div class="assistant-answer" id="assistant-answer">Ready for a city operations question.</div>
+    <small class="assistant-source" id="assistant-source">Grounded assistant · no external API key</small>
+  </section>
+</div>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.globe.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

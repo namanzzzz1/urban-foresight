@@ -1,0 +1,113 @@
+# CityTwin — AI-Powered Urban Digital Twin (working prototype)
+
+A FastAPI backend + vanilla JS/Leaflet dashboard that models a city's traffic,
+weather, air quality, and flood risk, with a "What If?" scenario simulator.
+
+## Run it locally
+
+```bash
+python -m venv venv && source venv/bin/activate   # or venv\Scripts\activate on Windows
+pip install -r requirements.txt
+python train_model.py                             # builds model/traffic_model.joblib (~1-3 min)
+uvicorn main:app --reload --port 8000
+```
+The `python train_model.py` step is required on a fresh clone: the trained model
+binary is intentionally not committed (see below), so it has to be built once
+from the public CSVs in `data/` before the traffic forecast endpoint works.
+
+Then open **http://localhost:8000** in your browser. No API key, no signup,
+no billing account needed — the map runs on free OpenStreetMap tiles.
+
+### Local login
+
+The dashboard uses SQLite-backed username/password authentication. On first
+startup it creates the operator account from these environment variables:
+
+```powershell
+$env:CITYTWIN_DEFAULT_USERNAME="operator"
+$env:CITYTWIN_DEFAULT_PASSWORD="change-this-password"
+```
+
+If they are not set, the development defaults are `operator` / `citytwin-demo`.
+Passwords are stored as salted PBKDF2 hashes and sessions use HttpOnly cookies.
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+The SQLite database is stored in the named `citytwin_data` volume so assets,
+alerts, and simulation history survive container restarts.
+
+### Tests
+
+```bash
+pytest -q
+```
+
+The API emits one-line JSON logs to stdout. Prediction logs include model
+inputs, peak output, and latency; simulation logs include inputs and results;
+unhandled request errors include exception stack traces. Set
+`CITYTWIN_DB_PATH` to point SQLite at another location.
+
+The trained model binary (`model/traffic_model.joblib`) is **deliberately not
+committed**: it is a ~212 MB file, which is above GitHub's 100 MB per-file
+limit, and it is fully reproducible from the small public CSVs in `data/`.
+Run `python train_model.py` once after installing dependencies to build it; the
+same command regenerates it (and rewrites `model/metrics.json`) any time you
+change the data or features. The Docker build runs this step automatically, so
+`docker compose up --build` still works with no extra setup.
+
+## What's genuinely real here, and what's illustrative
+
+Being upfront about this matters if you're using this project in an
+interview — here's the honest breakdown:
+
+| Piece | Status |
+|---|---|
+| **Traffic forecast** (`/api/predictions/traffic`, the "Traffic Congestion Forecast" chart) | **Real, trained ML.** A weighted RandomForest + ExtraTrees + HistGradientBoosting ensemble trained on the public *Metro Interstate Traffic Volume* dataset (Hogue, 2019, UCI ML Repository, doi:10.24432/C5X60B) — 40,565 real hourly traffic + weather records from I-94 near Minneapolis-St Paul, 2012–2018. Evaluated on a **chronological** hold-out (not shuffled) split: **R² = 0.953, MAE ≈ 241 vehicles/hour**. See `train_model.py` and `model/metrics.json`. |
+| **Supplementary road demand model** | **Real but auxiliary.** A separate RandomForest is trained on 98 open Government of Canada provincial-road ADT observations. Its target is annual average daily traffic, not hourly congestion; its current chronological holdout R² is **-0.112**, so it is packaged for research/provenance but deliberately not blended into the CityTwin hourly forecast. |
+| **Live weather / humidity / wind / rain** (top-left card) | **Real, live.** Fetched client-side from [Open-Meteo](https://open-meteo.com)'s free, keyless forecast API for whatever city you search. |
+| **Live AQI** (Air Quality card) | **Real, live.** From Open-Meteo's air-quality API (US AQI, PM2.5, PM10). |
+| **Map** | **Real.** Leaflet.js + OpenStreetMap tiles, no key required. Markers are custom demo assets (see below). |
+| **City search / geocoding** | **Real.** Open-Meteo's geocoding API — works for any city worldwide. |
+| **Telemetry stream** (`/ws/telemetry`, sparklines under the metric cards) | **Speed demo stream.** WebSocket speed samples remain simulated. Traffic forecast is model-driven; power demand and transit reliability are explicitly model-estimated from live weather + traffic until utility/transit provider feeds are connected. |
+| **Demo map assets** (Connaught Place, India Gate, Pragati Maidan, AIIMS accident, Yamuna flood zone) | **SQLite-persisted seed data**, scoped to New Delhi. Switching cities in search re-centers the map and replaces these with a single live marker — the demo assets don't relocate. |
+| **Flood-risk heat overlay** on the map | **Illustrative geospatial visualization**, not a calibrated hydrology model. It weights points near flood-tagged assets. A real version would need elevation, drainage network, and historical flood data (see "Next steps"). |
+| **Flood/traffic risk scores in "What If? Simulation"** | **Rule-based heuristic** (rainfall × drainage-style multiplier, traffic × network-load multiplier). Explainable by design, not ML — see `run_simulation()` in `main.py`. |
+| **City Health Index breakdown** (Environment/Mobility/Safety/Infrastructure) | **Demo values**, except Environment, which shifts with live AQI. |
+
+## Project structure
+
+```
+main.py              FastAPI app: overview, model info, forecasts, simulations, telemetry WS
+database.py          SQLite schema, seed data, and persistence helpers
+logging_config.py    JSON formatter and application logging setup
+traffic_model.py      Loads the trained model, turns predicted volume into a 0-100 congestion score
+train_model.py         Trains the RandomForest on the real dataset (rerun anytime)
+data/                  Metro_Interstate_Traffic_Volume.csv (real, public dataset)
+					   Traffic_Volumes_Provincial_Highway_System.csv (Government of Canada road counts)
+model/                 metrics.json (accuracy report) + traffic_model.joblib (built by train_model.py, not committed)
+static/                index.html, app.js, styles.css — the dashboard
+tests/                 pytest coverage for API persistence and prediction shape
+Dockerfile             Reproducible production container
+docker-compose.yml     One-command local deployment with persistent SQLite
+```
+
+## API surface
+
+- `GET /api/overview` — city, health index, metrics, alerts, map assets
+- `GET /api/model/info` — real training metrics (dataset size, date range, R², MAE)
+- `GET /api/predictions/traffic?location=&rain_mm=&temp_c=&clouds=&weather=` — ML-driven forecast, next 3 hours
+- `POST /api/simulations` — what-if scenario (rainfall, blocked road, traffic increase)
+- `GET /api/simulations` — persisted simulation history and count
+- `POST /api/routes/emergency` — routing decision metadata (stubbed)
+- `WS /ws/telemetry` — simulated live telemetry (traffic speed, AQI, power draw)
+
+## Next steps if you keep building this
+
+- **Flood model**: swap the heuristic for a model trained on real rainfall + elevation + drainage + historical-flood data (e.g., a DEM for your city + IMD rainfall records).
+- **Emergency routing**: replace the stub with a real shortest-path/ETA engine over OSM road-network data (e.g., OSRM or a NetworkX graph you build from `osmnx`).
+- **PostGIS**: move the hard-coded `ASSETS` list into a real PostGIS table so assets are queryable spatially.
+- **Multiple traffic sensors**: the current model comes from a single physical sensor; a per-city deployment would need local traffic-count data to retrain against.

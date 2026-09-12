@@ -1,0 +1,13 @@
+services:
+  citytwin:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      CITYTWIN_DB_PATH: /app/data/citytwin.db
+    volumes:
+      - citytwin_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  citytwin_data:
