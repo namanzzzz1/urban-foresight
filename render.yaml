@@ -1,0 +1,30 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploy: Render dashboard -> New + -> Blueprint -> pick this repository.
+#
+# IMPORTANT — memory: the traffic model loads roughly 1-2 GB of RAM (measured
+# ~990 MB resident / ~1.9 GB committed with the model in memory). Render's free
+# and starter instances are 512 MB and will run out of memory as soon as a
+# traffic forecast is requested. This blueprint therefore asks for the
+# "standard" (2 GB) plan, which Render shows with its price before you confirm.
+# If you want a free host that has enough RAM, use Hugging Face Spaces instead —
+# see "Deploy it live" in README.md.
+services:
+  - type: web
+    name: citytwin
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: standard
+    healthCheckPath: /api/config
+    autoDeploy: true
+    envVars:
+      - key: CITYTWIN_DB_PATH
+        value: /app/data/citytwin.db
+      - key: CITYTWIN_DEFAULT_USERNAME
+        value: operator
+      - key: CITYTWIN_DEFAULT_PASSWORD
+        value: citytwin-demo
+    # Optional: keeps simulations/alerts across deploys. Requires a paid plan.
+    disk:
+      name: citytwin-data
+      mountPath: /app/data
+      sizeGB: 1

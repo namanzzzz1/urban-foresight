@@ -4,3 +4,7 @@ __pycache__/
 .git/
 *.pyc
 *.db
+
+# Rebuilt inside the image by `RUN python train_model.py`; keeps the ~212 MB
+# local artifact out of the build context.
+model/*.joblib

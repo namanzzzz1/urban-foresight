@@ -14,4 +14,6 @@ COPY . .
 RUN python train_model.py && mkdir -p /app/data
 
 EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Bind to $PORT when the hosting platform provides one (Render, Railway, Fly, …),
+# falling back to 8000 for local `docker compose up`.
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

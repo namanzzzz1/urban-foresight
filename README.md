@@ -70,6 +70,68 @@ same command regenerates it (and rewrites `model/metrics.json`) any time you
 change the data or features. The Docker build runs this step automatically, so
 `docker compose up --build` still works with no extra setup.
 
+## Deploy it live (public URL)
+
+**GitHub Pages will not work for this project.** Pages only serves static files
+(HTML/CSS/JS), while CityTwin has a Python/FastAPI backend, a WebSocket feed,
+and a trained model — it needs a host that runs a process. The repository is
+already Dockerised, which is what makes deployment a few clicks.
+
+### Memory is the constraint
+
+With the traffic model loaded the process needs roughly **1–2 GB of RAM**
+(measured: ~990 MB resident, ~1.9 GB committed). That rules out most free
+tiers, which only give 256–512 MB:
+
+| Host | Free RAM | Runs this app? |
+|---|---|---|
+| Hugging Face Spaces | 16 GB (CPU basic) | Yes |
+| Google Cloud Run | up to 8 GB within the free allowance | Yes |
+| Render (free / starter) | 512 MB | No — runs out of memory |
+| Koyeb / Fly.io (free) | 256–512 MB | No — runs out of memory |
+
+### Option A — Hugging Face Spaces (free, recommended)
+
+1. Create a Space at <https://huggingface.co/new-space> → **SDK: Docker** →
+   *Blank* → hardware **CPU basic (free)**.
+2. Hugging Face reads the Space config from `README.md`, so add this front
+   matter to the very top of the file:
+
+   ```yaml
+   ---
+   title: CityTwin
+   emoji: 🏙️
+   colorFrom: blue
+   colorTo: green
+   sdk: docker
+   app_port: 8000
+   pinned: false
+   ---
+   ```
+3. Push this repository to the Space (it is its own git remote):
+
+   ```bash
+   git remote add space https://huggingface.co/spaces/<your-user>/<space-name>
+   git push space main
+   ```
+4. Hugging Face builds the `Dockerfile` (the build runs `train_model.py` from
+   the committed CSV) and serves the app at
+   `https://<your-user>-<space-name>.hf.space`.
+
+Free Spaces sleep after a period without traffic and wake on the next request —
+fine for a demo.
+
+### Option B — Render (paid; needs a 2 GB instance)
+
+This repository ships a `render.yaml` blueprint: in the Render dashboard go to
+**New +** → **Blueprint** → pick this repository. The blueprint is pre-set to the
+2 GB *standard* instance because the 512 MB free/starter instances run out of
+memory as soon as a forecast is requested. Render shows the price before you
+confirm.
+
+Either option builds the model during the image build from the committed
+`data/` CSVs, so no extra setup is needed.
+
 ## What's genuinely real here, and what's illustrative
 
 Being upfront about this matters if you're using this project in an
