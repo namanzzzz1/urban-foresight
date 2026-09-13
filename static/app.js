@@ -23,6 +23,11 @@ const views = {
 };
 const profiles = ['Naman', 'Aarav', 'Meera'];
 let activeProfile = 0;
+// Prototype demo login, pre-filled on the sign-in screen so anyone can open the
+// dashboard without knowing the credentials. Matches the backend defaults in
+// database.py; if you change CITYTWIN_DEFAULT_USERNAME / CITYTWIN_DEFAULT_PASSWORD
+// on the server, update these two values to match.
+const DEMO_CREDENTIALS = { username: 'operator', password: 'citytwin-demo' };
 
 // ---------- state ----------
 let map, tileLayer, floodHeat;
@@ -658,4 +663,6 @@ setInterval(tickClock, 1000);
 tickClock();
 
 // ---------- boot ----------
+$('#login-username').value = DEMO_CREDENTIALS.username;
+$('#login-password').value = DEMO_CREDENTIALS.password;
 checkAuth();

@@ -18,18 +18,29 @@ from the public CSVs in `data/` before the traffic forecast endpoint works.
 Then open **http://localhost:8000** in your browser. No API key, no signup,
 no billing account needed — the map runs on free OpenStreetMap tiles.
 
-### Local login
+### Local login — demo credentials
+
+> **Username: `operator`**
+> **Password: `citytwin-demo`**
+
+The sign-in form is **pre-filled with these demo credentials**, so anyone who
+opens the dashboard just clicks "Enter operations center" to get in — no need to
+know the credentials for this prototype.
 
 The dashboard uses SQLite-backed username/password authentication. On first
-startup it creates the operator account from these environment variables:
+startup it creates the operator account from environment variables, if you want
+to override the demo defaults:
 
 ```powershell
 $env:CITYTWIN_DEFAULT_USERNAME="operator"
-$env:CITYTWIN_DEFAULT_PASSWORD="change-this-password"
+$env:CITYTWIN_DEFAULT_PASSWORD="your-strong-password"
 ```
 
 If they are not set, the development defaults are `operator` / `citytwin-demo`.
 Passwords are stored as salted PBKDF2 hashes and sessions use HttpOnly cookies.
+If you change these environment variables, update `DEMO_CREDENTIALS` in
+`static/app.js` (and the `value` attributes in `static/index.html`) to match, so
+the pre-filled form keeps working.
 
 ### Docker
 

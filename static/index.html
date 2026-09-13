@@ -15,12 +15,12 @@
     <h1>Sign in to your city twin</h1>
     <p class="auth-copy">Access live weather, traffic intelligence, simulations, alerts, and city operations data.</p>
     <form id="login-form">
-      <label>Username<input id="login-username" autocomplete="username" placeholder="operator" required></label>
-      <label>Password<input id="login-password" type="password" autocomplete="current-password" placeholder="Enter password" required></label>
+      <label>Username<input id="login-username" autocomplete="username" placeholder="operator" value="operator" required></label>
+      <label>Password<input id="login-password" type="password" autocomplete="current-password" placeholder="citytwin-demo" value="citytwin-demo" required></label>
       <button class="auth-submit" type="submit">Enter operations center</button>
       <small class="auth-error" id="login-error"></small>
     </form>
-    <small class="auth-note">Credentials are stored securely in the local SQLite database.</small>
+    <small class="auth-note">Prototype demo login — username <b>operator</b>, password <b>citytwin-demo</b> (pre-filled below). Credentials are stored as salted PBKDF2 hashes in the local SQLite database.</small>
   </div>
 </section>
 <div id="vanta-bg" aria-hidden="true"></div>
